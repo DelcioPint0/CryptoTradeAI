@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoTradeAI - Professional Quant Terminal</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0b0f19; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        .pulse-fast { animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+    </style>
+</head>
+<body class="bg-[#030712] text-gray-100 font-sans min-h-screen overflow-y-auto custom-scrollbar p-3 sm:p-4 md:p-6 max-w-7xl mx-auto space-y-4">
+
+    <!-- SECTOR HEADER -->
+    <header class="bg-gray-950 border border-gray-800 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-2xl min-w-0">
+        <div class="min-w-0 w-full md:w-auto">
+            <div class="flex flex-wrap items-center gap-2 justify-between md:justify-start">
+                <h1 class="text-xl sm:text-2xl font-black text-blue-500 tracking-tight break-words">CryptoTradeAI <span class="text-[10px] font-mono px-2 py-0.5 bg-blue-950 text-blue-400 rounded-full border border-blue-900 inline-block align-middle">QUANT ENGINE v4.0</span></h1>
+                
+                <!-- LANGUAGE SELECTOR BUTTON (TOP RIGHT ALIGNED IN HEADER) -->
+                <div class="md:hidden">
+                    <select id="langSelect" onchange="toggleLanguage(this.value)" class="bg-gray-900 border border-gray-800 text-gray-300 text-xs font-mono font-bold px-2 py-1 rounded cursor-pointer focus:outline-none focus:border-blue-500">
+                        <option value="en">EN</option>
+                        <option value="pt">PT</option>
+                    </select>
+                </div>
+            </div>
+            <p id="txt-subtitle" class="text-xs text-gray-400 mt-0.5 break-words">Automated quantitative analysis with real-time contextualized intelligence</p>
+        </div>
+        
+        <div class="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto shrink-0">
+            <div class="flex items-center space-x-3 text-xs font-mono bg-gray-900 border border-gray-800 px-4 py-2 rounded-lg w-full md:w-auto justify-center">
+                <span class="w-2.5 h-2.5 rounded-full bg-green-500 pulse-fast"></span>
+                <span id="txt-streaming" class="text-gray-300 tracking-wider">STREAMING ACTIVE (1s)</span>
+            </div>
+            
+            <!-- DESKTOP LANGUAGE SELECTOR -->
+            <div class="hidden md:block">
+                <select id="langSelectDesktop" onchange="toggleLanguage(this.value)" class="bg-gray-900 border border-gray-800 text-gray-300 text-xs font-mono font-bold px-3 py-2 rounded-lg cursor-pointer focus:outline-none focus:border-blue-500">
+                    <option value="en">ENGLISH</option>
+                    <option value="pt">PORTUGUÊS</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- SECTOR CONTROLS -->
+    <section class="bg-gray-950 border border-gray-800 rounded-xl p-4 shadow-2xl">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+            <div class="bg-gray-900/60 border border-gray-800 p-2.5 rounded-lg flex items-center space-x-2 min-w-0">
+                <span id="lbl-asset" class="text-gray-500 font-bold uppercase text-[10px] tracking-wider shrink-0">ASSET:</span>
+                <select id="symbolSelect" onchange="forceTickReset()" class="bg-transparent text-white font-bold focus:outline-none w-full cursor-pointer truncate text-xs sm:text-sm">
+                    <option value="BTCUSDT">BTC / USDT (Bitcoin)</option>
+                    <option value="ETHUSDT">ETH / USDT (Ethereum)</option>
+                    <option value="SOLUSDT">SOL / USDT (Solana)</option>
+                </select>
+            </div>
+            <div class="bg-gray-900/60 border border-gray-800 p-2.5 rounded-lg flex items-center space-x-2 min-w-0">
+                <span id="lbl-time" class="text-gray-500 font-bold uppercase text-[10px] tracking-wider shrink-0">TIME:</span>
+                <select id="timeframeSelect" onchange="forceTickReset()" class="bg-transparent text-white font-bold focus:outline-none w-full cursor-pointer truncate text-xs sm:text-sm">
+                    <option value="5m">5 Minutes (Scalping)</option>
+                    <option value="15m">15 Minutes (Intraday)</option>
+                </select>
+            </div>
+            <div class="bg-gray-900/60 border border-yellow-900/40 p-2.5 rounded-lg flex items-center space-x-2 min-w-0 sm:col-span-2 md:col-span-1">
+                <span id="lbl-position" class="text-yellow-500 font-bold uppercase text-[10px] tracking-wider shrink-0">POSITION:</span>
+                <select id="positionState" onchange="handlePositionSim()" class="bg-transparent text-yellow-400 font-bold focus:outline-none w-full cursor-pointer truncate text-xs sm:text-sm">
+                    <!-- Gerado Dinamicamente pelo Script para respeitar o Idioma Padrão -->
+                </select>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTOR 1: LIVE DECISION MATRIX -->
+    <section class="bg-gray-950 border border-gray-800 rounded-xl p-4 sm:p-5 shadow-2xl relative min-w-0">
+        <div class="absolute top-4 right-4 flex items-center space-x-1.5 bg-gray-900 px-2 py-0.5 rounded border border-gray-800 hidden sm:flex">
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-500 pulse-fast"></span>
+            <span class="text-[10px] font-mono text-gray-400">REALTIME</span>
+        </div>
+        <h2 id="txt-sec1-title" class="text-xs sm:text-sm font-bold text-blue-400 uppercase tracking-wider mb-4 pb-2 border-b border-gray-900 flex items-center gap-2">
+            <span>01.</span> REACTIVE DECISION MATRIX
+        </h2>
+        
+        <div id="decisionView" class="font-mono text-xs space-y-4 min-w-0">
+            <div id="txt-loading-matrix" class="text-gray-500 italic animate-pulse py-4">Connecting to network bus and calculating metrics...</div>
+        </div>
+    </section>
+
+    <!-- SECTOR 2: RISK TRACKER & METRICS -->
+    <section class="bg-gray-950 border border-gray-800 rounded-xl p-4 sm:p-5 shadow-2xl min-w-0">
+        <h2 id="txt-sec2-title" class="text-xs sm:text-sm font-bold text-yellow-500 uppercase tracking-wider mb-4 pb-2 border-b border-gray-900 flex items-center gap-2">
+            <span>02.</span> ACTIVE RISK MONITOR
+        </h2>
+        
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 font-mono text-xs mb-4">
+            <div class="bg-[#090d16] p-3 rounded-lg border border-gray-900/60 min-w-0">
+                <span id="lbl-entry-price" class="text-gray-500 block text-[9px] sm:text-[10px] uppercase tracking-wider truncate">Entry Price</span>
+                <span id="riskEntryPrice" class="text-xs sm:text-sm text-gray-200 font-bold block mt-0.5 truncate">Awaiting order...</span>
+            </div>
+            <div class="bg-[#090d16] p-3 rounded-lg border border-gray-900/60 min-w-0">
+                <span id="lbl-sl-active" class="text-gray-500 block text-[9px] sm:text-[10px] uppercase tracking-wider truncate">Active Stop-Loss</span>
+                <span id="riskSL" class="text-xs sm:text-sm text-red-400 font-bold block mt-0.5 truncate">-</span>
+            </div>
+            <div class="bg-[#090d16] p-3 rounded-lg border border-gray-900/60 min-w-0">
+                <span id="lbl-tp-active" class="text-gray-500 block text-[9px] sm:text-[10px] uppercase tracking-wider truncate">Active Take-Profit</span>
+                <span id="riskTP" class="text-xs sm:text-sm text-green-400 font-bold block mt-0.5 truncate">-</span>
+            </div>
+            <div class="bg-[#090d16] p-3 rounded-lg border border-gray-900/60 flex justify-between items-center gap-2 min-w-0 col-span-2 lg:col-span-1">
+                <div class="truncate">
+                    <span id="lbl-net-pnl" class="text-gray-500 block text-[9px] sm:text-[10px] uppercase tracking-wider truncate">Net P&L</span>
+                    <span id="riskPnL" class="text-sm sm:text-base font-black text-gray-400 block truncate">0.00%</span>
+                </div>
+                <span id="pnlIndicator" class="text-[9px] sm:text-[10px] px-2 py-1 rounded bg-gray-900 text-gray-500 font-bold shrink-0">FLAT</span>
+            </div>
+        </div>
+
+        <div class="bg-[#050811] p-3 sm:p-4 rounded-lg border border-gray-900 min-w-0">
+            <h4 id="txt-telemetry-lbl" class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Indicator Telemetry Panel (Sample: 1s)</h4>
+            <div id="metricsPanel" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-xs text-gray-400 min-w-0">
+                <!-- Injetado dinamicamente -->
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTOR 3: MENTOR QUANT CHAT WITH LLM -->
+    <section class="bg-gray-950 border border-gray-800 rounded-xl shadow-2xl overflow-hidden flex flex-col h-[550px] min-w-0">
+        <div class="bg-gray-900/80 px-4 sm:p-4 py-3 border-b border-gray-800 flex justify-between items-center shrink-0 min-w-0">
+            <div class="flex items-center space-x-2 min-w-0">
+                <div class="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></div>
+                <h2 id="txt-sec3-title" class="text-xs sm:text-sm font-mono uppercase tracking-wider font-bold truncate">03. Mentor Quant Chat Expert (Gemini AI Live)</h2>
+            </div>
+            <span id="txt-llm-badge" class="text-[9px] font-mono text-gray-500 bg-gray-950 px-2 py-0.5 rounded border border-gray-900 shrink-0 hidden sm:inline">REALTIME LLM CONNECTION</span>
+        </div>
+
+        <!-- Fluxo das conversas -->
+        <div id="chatStream" class="flex-1 p-3 sm:p-4 overflow-y-auto space-y-4 custom-scrollbar text-xs font-mono bg-[#02040a] min-w-0">
+            <!-- Mensagens injetadas via JavaScript -->
+        </div>
+
+        <!-- Input fixado na base do chat -->
+        <div class="p-3 sm:p-4 bg-gray-950 border-t border-gray-900 shrink-0 min-w-0">
+            <form id="chatForm" onsubmit="sendChatMessage(event)" class="flex gap-2 min-w-0">
+                <input type="text" id="userInput" placeholder="Ask any question about trade or send your current operations..." class="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-3 sm:px-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 font-mono min-w-0 shadow-inner" autocomplete="off">
+                <button type="submit" id="chatSubmitBtn" class="bg-blue-600 hover:bg-blue-500 text-white font-bold px-4 sm:px-6 rounded-xl text-xs transition duration-150 cursor-pointer shadow-md shrink-0">Send</button>
+            </form>
+        </div>
+    </section>
+
+    <script>
+        // CONFIGURAÇÃO DA LLM (Substitua pela sua chave obtida gratuitamente no Google AI Studio)
+        const GEMINI_API_KEY = "AIzaSyBI4xbdD1CgC6jbmR1ZtUNAfPtfqjK0APo"; 
+
+        // Dicionário de Idiomas (Internacionalização Completa i18n)
+        const i18n = {
+            en: {
+                subtitle: "Automated quantitative analysis with real-time contextualized intelligence",
+                streaming: "STREAMING ACTIVE (1s)",
+                lblAsset: "ASSET:",
+                lblTime: "TIME:",
+                lblPosition: "POSITION:",
+                sec1Title: "<span>01.</span> REACTIVE DECISION MATRIX",
+                loadingMatrix: "Connecting to network bus and calculating metrics...",
+                sec2Title: "<span>02.</span> ACTIVE RISK MONITOR",
+                lblEntryPrice: "Entry Price",
+                lblSlActive: "Active Stop-Loss",
+                lblTpActive: "Active Take-Profit",
+                lblNetPnl: "Net P&L",
+                telemetryLbl: "Indicator Telemetry Panel (Sample: 1s)",
+                sec3Title: "<span>03.</span> Mentor Quant Chat Expert (Gemini AI Live)",
+                llmBadge: "REALTIME LLM CONNECTION",
+                chatInputPlaceholder: "Ask any question about trade or send your current operations...",
+                chatSendBtn: "Send",
+                awaitingOrder: "Awaiting order...",
+                optOut: "No Trade (Awaiting Signal)",
+                optLong: "Simulate: Buy Now (Long)",
+                optShort: "Simulate: Sell Now (Short)",
+                timeMinutes: "Minutes",
+                decisionHold: "⛔ DO NOT TRADE NOW",
+                decisionBuy: "✅ BUY",
+                decisionSell: "❌ SELL",
+                labelAnalysisTech: "Structural Technical Analysis",
+                labelAnalysisFund: "Liquidity & Order Flow",
+                labelRiskParams: "Operational Risk Parameters",
+                labelRecommendedHand: "Recommended Allocation:",
+                badgeYou: "YOU",
+                badgeMentor: "MENTOR QUANT",
+                welcomeMessage: "Hello! I am your AI-powered Mentor Quant Expert.\n\nI am fully synced with this dashboard's real-time data and metrics. I can answer any trading question tailored specifically to your active layout or positions. How can I assist your operations today?",
+                alertTpTitle: "🚨 MENTOR ALERT (REALTIME):\nThe asset hit our mathematical Take-Profit boundary at",
+                alertTpAdvise: "🎯 ADVISE & NEXT STEP: The stipulated target was completely filled. Execute your exit sell now to secure your accumulated performance of",
+                alertSlTitle: "🚨 MENTOR ALERT (REALTIME):\nThe market broke down our tactical Stop-Loss support at",
+                alertSlAdvise: "⚠️ ADVISE & NEXT STEP: Protect your capital. Exit and close your buy operation immediately to mitigate further mathematical variance.",
+                alertShortTp: "🚨 MENTOR ALERT (REALTIME):\nDownside momentum completed. Buyback target filled at",
+                alertShortTpAdvise: "🎯 ADVISE & NEXT STEP: Secure Short profits. Buy back now to settle the position with positive performance!",
+                alertShortSl: "🚨 MENTOR ALERT (REALTIME):\nBullish reversal breached our protective risk ceiling at",
+                alertShortSlAdvise: "⚠️ ADVISE & NEXT STEP: Technical stop triggered. Buy back at market immediately to cap losses.",
+                orientationLong: "📈 COGNITIVE POSITION GUIDANCE:\nYou simulated a BUY opening (Long) at",
+                orientationLongAdvise: "Stay sharp. My algorithm scans the order flow every 1 second. As soon as the asset matches our optimum exit timeframe, I will interrupt the chat and push an immediate action note here!",
+                orientationShort: "📉 COGNITIVE POSITION GUIDANCE:\nYou simulated a SELL opening (Short) at \nRisk parameters locked successfully."
+            },
+            pt: {
+                subtitle: "Análise quantitativa automatizada com inteligência contextualizada em tempo real",
+                streaming: "STREAMING ATIVO (1s)",
+                lblAsset: "ATIVO:",
+                lblTime: "TEMPO:",
+                lblPosition: "POSIÇÃO:",
+                sec1Title: "<span>01.</span> MATRIZ DE DECISÃO REATIVA",
+                loadingMatrix: "Conectando ao barramento de rede e calculando métricas...",
+                sec2Title: "<span>02.</span> MONITOR DE RISCO ATIVO",
+                lblEntryPrice: "Preço de Entrada",
+                lblSlActive: "Stop-Loss Ativo",
+                lblTpActive: "Take-Profit Ativo",
+                lblNetPnl: "P&L Líquido",
+                telemetryLbl: "Painel de Telemetria de Indicadores (Amostragem: 1s)",
+                sec3Title: "<span>03.</span> Mentor Quant Chat Expert (Gemini AI Live)",
+                llmBadge: "CONEXÃO REALTIME LLM",
+                chatInputPlaceholder: "Faça qualquer pergunta sobre trade ou envie suas operações atuais...",
+                chatSendBtn: "Enviar",
+                awaitingOrder: "Awaiting order...",
+                optOut: "Nenhum Trade (Aguardando Sinal)",
+                optLong: "Simular: Comprei Agora (Long)",
+                optShort: "Simular: Vendi Agora (Short)",
+                timeMinutes: "Minutos",
+                decisionHold: "⛔ NÃO NEGOCIAR AGORA",
+                decisionBuy: "✅ COMPRAR",
+                decisionSell: "❌ VENDER",
+                labelAnalysisTech: "Análise Técnico Estrutural",
+                labelAnalysisFund: "Liquidez & Fluxo de Ordens",
+                labelRiskParams: "Parâmetros Operacionais de Risco",
+                labelRecommendedHand: "Mão Recomendada:",
+                badgeYou: "VOCÊ",
+                badgeMentor: "MENTOR QUANT",
+                welcomeMessage: "Olá! Sou o seu Mentor Quant Expert alimentado por IA.\n\nEstou sincronizado com os dados e métricas deste painel de controle. Posso responder qualquer tipo de pergunta de trade de forma personalizada à sua posição atual na tela. Como posso ajudar nas suas operações hoje?",
+                alertTpTitle: "🚨 MENTOR ALERTA (TEMPO REAL):\nO par atingiu nossa barreira matemática de Take-Profit em",
+                alertTpAdvise: "🎯 CONSELHO E PASSO A SEGUIR: O alvo estipulado foi preenchido. Execute a venda de saída agora para embolsar o seu lucro acumulado de",
+                alertSlTitle: "🚨 MENTOR ALERTA (TEMPO REAL):\nO mercado rompeu o suporte tático de Stop-Loss em",
+                alertSlAdvise: "⚠️ CONSELHO E PASSO A SEGUIR: Proteja seu capital. Saia e encerre a compra agora para mitigar desvios maiores!",
+                alertShortTp: "🚨 MENTOR ALERTA (TEMPO REAL):\nSinal de queda concluído. Meta de recompra atingida em",
+                alertShortTpAdvise: "🎯 CONSELHO E PASSO A SEGUIR: Realize o lucro do Short. Compre de volta agora para liquidar a posição com performance positiva!",
+                alertShortSl: "🚨 MENTOR ALERTA (TEMPO REAL):\nReversão altista violou o teto protetor de risco em",
+                alertShortSlAdvise: "⚠️ CONSELHO E PASSO A SEGUIR: Stop técnico acionado. Recompre a mercado imediatamente para travar a perda.",
+                orientationLong: "📈 ORIENTAÇÃO COGNITIVA DE POSIÇÃO:\nVocê simulou uma abertura de COMPRA (Long) em",
+                orientationLongAdvise: "Fique focado. Meu algoritmo cruzará o fluxo de ordens a cada 1 segundo. Assim que o par atingir o momento ótimo de saída, eu vou interromper o chat e enviar a notificação exata de ação imediata aqui!",
+                orientationShort: "📉 ORIENTAÇÃO COGNITIVA DE POSIÇÃO:\nVocê simulou uma abertura de VENDA (Short) em \nRisco acoplado com sucesso."
+            }
+        };
+
+        // Barramento de estados quantitativos globais
+        let engineState = {
+            language: "en", // Padrão Inicial Inglês conforme exigido
+            symbol: "BTCUSDT",
+            timeframe: "5m",
+            precoAtual: 0,
+            decisaoAtual: "ANALISANDO",
+            posicaoStatus: "FORA", 
+            precoEntrada: 0,
+            stopLoss: 0,
+            takeProfit: 0,
+            rsi: 50,
+            kStoch: 50,
+            macd: 0,
+            signal: 0,
+            ema9: 0, ema21: 0, ema50: 0,
+            alertaEnviado: false
+        };
+
+        // --- SISTEMA INTERNACIONALIZAÇÃO (MUDANÇA EM TEMPO REAL) ---
+        function toggleLanguage(lang) {
+            engineState.language = lang;
+            
+            // Sincroniza seletores mobile e desktop
+            document.getElementById('langSelect').value = lang;
+            document.getElementById('langSelectDesktop').value = lang;
+
+            // Altera elementos estáticos DOM
+            document.getElementById('txt-subtitle').innerText = i18n[lang].subtitle;
+            document.getElementById('txt-streaming').innerText = i18n[lang].streaming;
+            document.getElementById('lbl-asset').innerText = i18n[lang].lblAsset;
+            document.getElementById('lbl-time').innerText = i18n[lang].lblTime;
+            document.getElementById('lbl-position').innerText = i18n[lang].lblPosition;
+            document.getElementById('txt-sec1-title').innerHTML = i18n[lang].sec1Title;
+            document.getElementById('txt-sec2-title').innerHTML = i18n[lang].sec2Title;
+            document.getElementById('lbl-entry-price').innerText = i18n[lang].lblEntryPrice;
+            document.getElementById('lbl-sl-active').innerText = i18n[lang].lblSlActive;
+            document.getElementById('lbl-tp-active').innerText = i18n[lang].lblTpActive;
+            document.getElementById('lbl-net-pnl').innerText = i18n[lang].lblNetPnl;
+            document.getElementById('txt-telemetry-lbl').innerText = i18n[lang].telemetryLbl;
+            document.getElementById('txt-sec3-title').innerHTML = i18n[lang].sec3Title;
+            document.getElementById('txt-llm-badge').innerText = i18n[lang].llmBadge;
+            document.getElementById('userInput').placeholder = i18n[lang].chatInputPlaceholder;
+            document.getElementById('chatSubmitBtn').innerText = i18n[lang].chatSendBtn;
+
+            // Recarrega opções de tempo do seletor
+            const tfSel = document.getElementById('timeframeSelect');
+            const currentTf = tfSel.value;
+            tfSel.innerHTML = `
+                <option value="5m">5 ${i18n[lang].timeMinutes} (Scalping)</option>
+                <option value="15m">15 ${i18n[lang].timeMinutes} (Intraday)</option>
+            `;
+            tfSel.value = currentTf;
+
+            // Recarrega opções do seletor de posições
+            const posSel = document.getElementById('positionState');
+            posSel.innerHTML = `
+                <option value="FORA">${i18n[lang].optOut}</option>
+                <option value="COMPRADO">${i18n[lang].optLong}</option>
+                <option value="VENDIDO">${i18n[lang].optShort}</option>
+            `;
+            posSel.value = engineState.posicaoStatus;
+
+            // Atualiza views dependentes de texto
+            if(engineState.posicaoStatus === "FORA") {
+                document.getElementById('riskEntryPrice').innerText = i18n[lang].awaitingOrder;
+            }
+            
+            runHFTLoop();
+        }
+
+        // --- MATH CALCULATORS ---
+        function runEMA(d, p) {
+            let k = 2 / (p + 1), ema = [d[0]];
+            for (let i = 1; i < d.length; i++) ema.push(d[i] * k + ema[i - 1] * (1 - k));
+            return ema;
+        }
+
+        function runRSI(f, p = 14) {
+            let rsi = new Array(f.length).fill(50), g = 0, l = 0;
+            for (let i = 1; i <= p; i++) {
+                let d = f[i] - f[i - 1];
+                if (d > 0) g += d; else l -= d;
+            }
+            let mg = g / p, ml = l / p;
+            rsi[p] = 100 - (100 / (1 + (mg / (ml || 1e-10))));
+            for (let i = p + 1; i < f.length; i++) {
+                let d = f[i] - f[i - 1];
+                mg = (mg * (p - 1) + (d > 0 ? d : 0)) / p;
+                ml = (ml * (p - 1) + (d < 0 ? -d : 0)) / p;
+                rsi[i] = 100 - (100 / (1 + (mg / (ml || 1e-10))));
+            }
+            return rsi;
+        }
+
+        // --- CHAT DISPLAY MANAGEMENT ---
+        function appendChatMsg(sender, text) {
+            const chatStream = document.getElementById('chatStream');
+            const box = document.createElement('div');
+            const lang = engineState.language;
+            if (sender === 'user') {
+                box.className = "flex justify-end min-w-0";
+                box.innerHTML = `<div class="bg-gray-800 text-gray-100 max-w-[85%] px-3.5 py-2 rounded-2xl rounded-tr-none text-xs border border-gray-700 font-sans shadow-md break-words min-w-0"><span class="text-[8px] font-mono text-gray-500 block text-right font-bold tracking-wider mb-0.5">${i18n[lang].badgeYou}</span>${text}</div>`;
+            } else {
+                box.className = "flex justify-start min-w-0";
+                box.innerHTML = `<div class="bg-gray-900 text-green-400 max-w-[90%] px-3.5 py-2.5 rounded-2xl rounded-tl-none border border-gray-800 font-mono text-xs whitespace-pre-wrap shadow-md break-words min-w-0"><span class="text-[8px] text-gray-500 block font-bold tracking-wider mb-1">${i18n[lang].badgeMentor}</span>${text}</div>`;
+            }
+            chatStream.appendChild(box);
+            chatStream.scrollTop = chatStream.scrollHeight;
+        }
+
+        // --- S1 RENDERING ---
+        function renderDecisionLayout(decisao, timeframe, analiseTecnica, analiseFundamental, sl, tp, posicao, confianca) {
+            const view = document.getElementById('decisionView');
+            const lang = engineState.language;
+            
+            let colorClass = "text-amber-500";
+            let bgBadge = "bg-amber-950/30 border-amber-900/60";
+            if(decisao.includes("BUY") || decisao.includes("COMPRAR")) { colorClass = "text-green-400"; bgBadge = "bg-green-950/30 border-green-900/60"; }
+            if(decisao.includes("SELL") || decisao.includes("VENDER")) { colorClass = "text-red-400"; bgBadge = "bg-red-950/30 border-red-900/60"; }
+
+            view.innerHTML = `
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-center ${bgBadge} border p-4 rounded-xl min-w-0">
+    <div class="text-center sm:text-left min-w-0">
+        <div class="text-[9px] text-gray-500 uppercase font-black tracking-wider">DECISION AI</div>
+        <div class="text-lg font-black mt-0.5 tracking-wider ${colorClass} break-words">${decisao}</div>
+    </div>
+    <div class="text-center border-t sm:border-t-0 sm:border-l lg:border-x border-gray-900 py-2 sm:py-0 min-w-0">
+        <div class="text-[9px] text-gray-500 uppercase font-black tracking-wider">PRICE</div>
+        <div class="text-base font-bold text-white mt-0.5 truncate">$${engineState.precoAtual.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+    </div>
+    <div class="text-center border-b sm:border-b-0 border-gray-900 sm:border-r lg:border-r py-2 sm:py-0 min-w-0">
+        <div class="text-[9px] text-gray-500 uppercase font-black tracking-wider">CONFIDENCE</div>
+        <div class="text-base font-bold ${colorClass} mt-0.5">${confianca}%</div>
+    </div>
+    <div class="text-center lg:text-right min-w-0 pt-2 lg:pt-0">
+        <span class="text-[10px] font-bold px-2.5 py-1 bg-gray-900 text-gray-300 rounded border border-gray-800 inline-block">TF: ${timeframe}</span>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 min-w-0">
+    <div class="bg-[#090d16] p-3.5 rounded-xl border border-gray-900/60 min-w-0">
+        <div class="text-[10px] text-blue-400 font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1.5 truncate">
+            <span class="w-1 h-3 bg-blue-500 block rounded-full shrink-0"></span> ${i18n[lang].labelAnalysisTech}
+        </div>
+        <div class="text-gray-300 leading-relaxed text-[11px] sm:text-xs break-words whitespace-pre-wrap">${analiseTecnica}</div>
+    </div>
+    <div class="bg-[#090d16] p-3.5 rounded-xl border border-gray-900/60 min-w-0">
+        <div class="text-[10px] text-purple-400 font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1.5 truncate">
+            <span class="w-1 h-3 bg-purple-500 block rounded-full shrink-0"></span> ${i18n[lang].labelAnalysisFund}
+        </div>
+        <div class="text-gray-300 leading-relaxed text-[11px] sm:text-xs break-words whitespace-pre-wrap">${analiseFundamental}</div>
+    </div>
+</div>
+
+<div class="bg-gray-900/30 p-3.5 rounded-xl border border-gray-800/80 mt-3 min-w-0">
+    <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2 truncate">${i18n[lang].labelRiskParams}</div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-gray-300 text-[11px] sm:text-xs min-w-0">
+        <div class="bg-gray-950/60 p-2 rounded border border-gray-900/80 truncate">Stop-Loss (SL): <span class="text-red-400 font-bold">${sl}</span></div>
+        <div class="bg-gray-950/60 p-2 rounded border border-gray-900/80 truncate">Take-Profit (TP): <span class="text-green-400 font-bold">${tp}</span></div>
+        <div class="bg-gray-950/60 p-2 rounded border border-gray-900/80 truncate">${i18n[lang].labelRecommendedHand} <span class="text-white font-bold">${posicao}</span></div>
+    </div>
+</div>
+            `;
+        }
+
+        // --- HFT ENGINE CORE LOOP ---
+        async function runHFTLoop() {
+            engineState.symbol = document.getElementById('symbolSelect').value;
+            engineState.timeframe = document.getElementById('timeframeSelect').value;
+            const lang = engineState.language;
+
+            try {
+                const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${engineState.symbol}&interval=${engineState.timeframe}&limit=150`);
+                if(!res.ok) return;
+                const klines = await res.json();
+
+                const fechamentos = klines.map(k => parseFloat(k[4]));
+                const maximos = klines.map(k => parseFloat(k[2]));
+                const minimos = klines.map(k => parseFloat(k[3]));
+                const volumes = klines.map(k => parseFloat(k[5]));
+                const idx = fechamentos.length - 1;
+                
+                engineState.precoAtual = fechamentos[idx];
+
+                const ema9 = runEMA(fechamentos, 9);
+                const ema21 = runEMA(fechamentos, 21);
+                const ema50 = runEMA(fechamentos, 50);
+                const rsi = runRSI(fechamentos, 14);
+                
+                let e12 = runEMA(fechamentos, 12), e26 = runEMA(fechamentos, 26);
+                let macdLine = e12.map((v, i) => v - e26[i]);
+                let signalLine = runEMA(macdLine, 9);
+
+                let max14 = Math.max(...maximos.slice(idx-14, idx+1));
+                let min14 = Math.min(...minimos.slice(idx-14, idx+1));
+                let kStoch = ((fechamentos[idx] - min14) / ((max14 - min14) || 1e-10)) * 100;
+
+                engineState.rsi = rsi[idx]; engineState.kStoch = kStoch;
+                engineState.macd = macdLine[idx]; engineState.signal = signalLine[idx];
+                engineState.ema9 = ema9[idx]; engineState.ema21 = ema21[idx]; engineState.ema50 = ema50[idx];
+
+                updateMetricsPanel();
+
+                let score = 0;
+                if (ema9[idx] > ema21[idx] && ema21[idx] > ema50[idx]) score += 2;
+                else if (ema9[idx] < ema21[idx] && ema21[idx] < ema50[idx]) score -= 2;
+                if (rsi[idx] < 35) score += 1; else if (rsi[idx] > 65) score -= 1;
+                if (macdLine[idx] > signalLine[idx]) score += 1; else score -= 1;
+
+                let decisao = i18n[lang].decisionHold;
+                let confianca = 50;
+
+                if (score >= 2) { decisao = i18n[lang].decisionBuy; confianca = Math.min(70 + (score * 5), 97); }
+                else if (score <= -2) { decisao = i18n[lang].decisionSell; confianca = Math.min(70 + (Math.abs(score) * 5), 97); }
+
+                let viés = ema9[idx] > ema21[idx] 
+                    ? (lang === 'en' ? "Progressive Bullish" : "Alta Progressiva") 
+                    : (lang === 'en' ? "Structural Bearish" : "Baixa Estrutural");
+
+                let tTxt = lang === 'en' 
+                    ? `• Aligned moving averages indicating ${viés} bias.\n• Oscillators point RSI at ${rsi[idx].toFixed(2)} and Stochastic at ${kStoch.toFixed(2)}.\n• Short-term chart momentum is accelerating.`
+                    : `• Médias móveis alinhadas indicando viés de ${viés}.\n• Osciladores apontam RSI em ${rsi[idx].toFixed(2)} e Estocástico em ${kStoch.toFixed(2)}.\n• Momentum de fluxo gráfico em aceleração de curtíssimo prazo.`;
+
+                let fTxt = lang === 'en'
+                    ? `• Scan computed traded volume of ${volumes[idx].toFixed(2)} tokens.\n• Institutional order blocks positioned near current quotation.\n• Absence of statistical distortions.`
+                    : `• Varredura computou volume transacionado de ${volumes[idx].toFixed(2)} tokens.\n• Blocos de ordens institucionais posicionados nas proximidades da cotação atual.\n• Ausência de distorções estatísticas.`;
+
+                let slStr = "0.00", tpStr = "0.00", posStr = "0.0%";
+                if (decisao === i18n[lang].decisionBuy) {
+                    slStr = `$${(engineState.precoAtual * 0.985).toFixed(2)}`;
+                    tpStr = `$${(engineState.precoAtual * 1.03).toFixed(2)}`;
+                    posStr = lang === 'en' ? "1.5% to 2.0% margin" : "1.5% a 2.0% de margem";
+                } else if (decisao === i18n[lang].decisionSell) {
+                    slStr = `$${(engineState.precoAtual * 1.015).toFixed(2)}`;
+                    tpStr = `$${(engineState.precoAtual * 0.97).toFixed(2)}`;
+                    posStr = lang === 'en' ? "1.5% to 2.0% margin" : "1.5% a 2.0% de margem";
+                }
+
+                renderDecisionLayout(decisao, engineState.timeframe, tTxt, fTxt, slStr, tpStr, posStr, confianca);
+                engineState.decisaoAtual = decisao;
+
+                processLivePositionRisk();
+
+            } catch(e) {
+                console.error("HFT Engine Error: ", e);
+            }
+        }
+
+        // --- REALTIME RISK & AUTO ALERTS ---
+        function processLivePositionRisk() {
+            const lang = engineState.language;
+            if (engineState.posicaoStatus === "FORA") {
+                document.getElementById('riskEntryPrice').innerText = i18n[lang].awaitingOrder;
+                document.getElementById('riskSL').innerText = "-";
+                document.getElementById('riskTP').innerText = "-";
+                document.getElementById('riskPnL').innerText = "0.00%";
+                document.getElementById('pnlIndicator').className = "text-[10px] px-2 py-0.5 rounded bg-gray-900 text-gray-500 font-bold shrink-0";
+                document.getElementById('pnlIndicator').innerText = "FLAT";
+                return;
+            }
+
+            let pnl = 0;
+            if (engineState.posicaoStatus === "COMPRADO") {
+                pnl = ((engineState.precoAtual - engineState.precoEntrada) / engineState.precoEntrada) * 100;
+            } else if (engineState.posicaoStatus === "VENDIDO") {
+                pnl = ((engineState.precoEntrada - engineState.precoAtual) / engineState.precoEntrada) * 100;
+            }
+
+            document.getElementById('riskEntryPrice').innerText = `$${engineState.precoEntrada.toFixed(2)}`;
+            document.getElementById('riskSL').innerText = `$${engineState.stopLoss.toFixed(2)}`;
+            document.getElementById('riskTP').innerText = `$${engineState.takeProfit.toFixed(2)}`;
+            document.getElementById('riskPnL').innerText = `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%`;
+
+            const ind = document.getElementById('pnlIndicator');
+            if (pnl > 0) { ind.className = "text-[10px] px-2 py-0.5 rounded bg-green-950 text-green-400 font-bold shrink-0"; ind.innerText = "PROFIT"; }
+            else { ind.className = "text-[10px] px-2 py-0.5 rounded bg-red-950 text-red-400 font-bold shrink-0"; ind.innerText = "LOSS"; }
+
+            if (!engineState.alertaEnviado) {
+                if (engineState.posicaoStatus === "COMPRADO") {
+                    if (engineState.precoAtual >= engineState.takeProfit) {
+                        appendChatMsg('mentor', `${i18n[lang].alertTpTitle} $${engineState.precoAtual.toFixed(2)}.\n\n${i18n[lang].alertTpAdvise} ${pnl.toFixed(2)}%!`);
+                        engineState.alertaEnviado = true;
+                        autoExitPosition();
+                    } else if (engineState.precoAtual <= engineState.stopLoss) {
+                        appendChatMsg('mentor', `${i18n[lang].alertSlTitle} $${engineState.precoAtual.toFixed(2)}.\n\n${i18n[lang].alertSlAdvise}`);
+                        engineState.alertaEnviado = true;
+                        autoExitPosition();
+                    }
+                } else if (engineState.posicaoStatus === "VENDIDO") {
+                    if (engineState.precoAtual <= engineState.takeProfit) {
+                        appendChatMsg('mentor', `${i18n[lang].alertShortTp} $${engineState.precoAtual.toFixed(2)}.\n\n${i18n[lang].alertShortTpAdvise}`);
+                        engineState.alertaEnviado = true;
+                        autoExitPosition();
+                    } else if (engineState.precoAtual >= engineState.stopLoss) {
+                        appendChatMsg('mentor', `${i18n[lang].alertShortSl} $${engineState.precoAtual.toFixed(2)}.\n\n${i18n[lang].alertShortSlAdvise}`);
+                        engineState.alertaEnviado = true;
+                        autoExitPosition();
+                    }
+                }
+            }
+        }
+
+        function handlePositionSim() {
+            const val = document.getElementById('positionState').value;
+            const lang = engineState.language;
+            engineState.posicaoStatus = val;
+            engineState.alertaEnviado = false;
+
+            if(val !== "FORA") {
+                engineState.precoEntrada = engineState.precoAtual;
+                if(val === "COMPRADO") {
+                    engineState.stopLoss = engineState.precoAtual * 0.985;
+                    engineState.takeProfit = engineState.precoAtual * 1.03;
+                    appendChatMsg('mentor', `${i18n[lang].orientationLong} $${engineState.precoEntrada.toFixed(2)}.\n\n${i18n[lang].orientationLongAdvise}`);
+                } else {
+                    engineState.stopLoss = engineState.precoAtual * 1.015;
+                    engineState.takeProfit = engineState.precoAtual * 0.97;
+                    appendChatMsg('mentor', `${i18n[lang].orientationShort} $${engineState.precoEntrada.toFixed(2)}.`);
+                }
+            } else {
+                autoExitPosition();
+            }
+        }
+
+        function autoExitPosition() {
+            engineState.posicaoStatus = "FORA";
+            document.getElementById('positionState').value = "FORA";
+        }
+
+        function updateMetricsPanel() {
+            const panel = document.getElementById('metricsPanel');
+            if(!panel) return;
+            panel.innerHTML = `
+                <div class="bg-gray-900/40 p-2 rounded border border-gray-900/60 flex justify-between min-w-0 truncate"><span>RSI:</span><span class="font-bold text-gray-200">${engineState.rsi.toFixed(2)}</span></div>
+                <div class="bg-gray-900/40 p-2 rounded border border-gray-900/60 flex justify-between min-w-0 truncate"><span>Stoch:</span><span class="font-bold text-gray-200">${engineState.kStoch.toFixed(1)}</span></div>
+                <div class="bg-gray-900/40 p-2 rounded border border-gray-900/60 flex justify-between min-w-0 truncate"><span>MACD:</span><span class="font-bold text-gray-200">${engineState.macd.toFixed(3)}</span></div>
+                <div class="bg-gray-900/40 p-2 rounded border border-gray-900/60 flex justify-between min-w-0 truncate"><span>EMA9:</span><span class="text-blue-400 font-bold">$${engineState.ema9.toFixed(1)}</span></div>
+                <div class="bg-gray-900/40 p-2 rounded border border-gray-900/60 flex justify-between min-w-0 truncate"><span>EMA21:</span><span class="text-purple-400 font-bold">$${engineState.ema21.toFixed(1)}</span></div>
+                <div class="bg-gray-900/40 p-2 rounded border border-gray-900/60 flex justify-between min-w-0 truncate"><span>EMA50:</span><span class="text-amber-400 font-bold">$${engineState.ema50.toFixed(1)}</span></div>
+            `;
+        }
+
+        function forceTickReset() {
+            const lang = engineState.language;
+            document.getElementById('decisionView').innerHTML = `<div class="text-gray-500 italic animate-pulse py-2">${i18n[lang].loadingMatrix}</div>`;
+            runHFTLoop();
+        }
+
+        // --- INTEGRAÇÃO DA LLM (GEMINI 2.5 FLASH) DIRECIONADA PELO IDIOMA EM TEMPO REAL ---
+        async function sendChatMessage(event) {
+            event.preventDefault();
+            const input = document.getElementById('userInput');
+            const submitBtn = document.getElementById('chatSubmitBtn');
+            const prompt = input.value.trim();
+            if(!prompt) return;
+
+            appendChatMsg('user', prompt);
+            input.value = "";
+            input.disabled = true;
+            submitBtn.disabled = true;
+            submitBtn.innerText = "...";
+
+            const currentLang = engineState.language;
+
+            try {
+                if (GEMINI_API_KEY === "SUA_API_KEY_AQUI" || GEMINI_API_KEY === "") {
+                    throw new Error("API_KEY_MISSING");
+                }
+
+                // Injeção de Contexto contendo a Língua Dinâmica Selecionada pelo Usuário no Botão
+                const systemInstruction = `You are Mentor Quant, an expert trader from CryptoTradeAI.
+Your mission is to answer any trading question professionally, directly, analytically, and coldly.
+Your response MUST BE 100% COMPLETE, satisfy the user query entirely, and conclude logically without text cuts.
+
+CRITICAL DIRECTIVE ON LANGUAGE:
+- The user's currently selected terminal language is: ${currentLang.toUpperCase()} (either EN for English or PT for Portuguese).
+- You MUST answer and formulate the entirety of your response in ${currentLang === 'en' ? 'ENGLISH' : 'PORTUGUESE'}. 
+- Match all your logic and insights to this specific language selection perfectly.
+
+REAL-TIME TERMINAL DATA:
+- Active Symbol: ${engineState.symbol}
+- Timeframe: ${engineState.timeframe}
+- Live Price: $${engineState.precoAtual.toFixed(2)}
+- Decision Engine Output: ${engineState.decisaoAtual}
+- User Simulated Position: ${engineState.posicaoStatus} ${engineState.posicaoStatus !== 'FORA' ? `(Entry: $${engineState.precoEntrada.toFixed(2)})` : ''}
+- Metrics: RSI=${engineState.rsi.toFixed(2)}, Stoch=${engineState.kStoch.toFixed(1)}, MACD=${engineState.macd.toFixed(3)}, EMA9=$${engineState.ema9.toFixed(2)}, EMA50=$${engineState.ema50.toFixed(2)}.
+
+EXECUTION STEPS:
+1. Provide a direct answer and tie it down with our live dashboard data metrics.
+2. NEVER leave lines truncated or incomplete.
+3. Return clean formatting only. Max output capacity is unthrottled up to 1000 tokens to ensure completeness.`;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        systemInstruction: { parts: [{ text: systemInstruction }] },
+                        generationConfig: {
+                            maxOutputTokens: 1000, 
+                            temperature: 0.3
+                        }
+                    })
+                });
+
+                if (!response.ok) throw new Error("API_ERROR");
+
+                const data = await response.json();
+                let replyText = data.candidates[0].content.parts[0].text;
+                appendChatMsg('mentor', replyText);
+
+            } catch (error) {
+                console.error("Mentor LLM Error: ", error);
+                
+                // FALLBACK COGNITIVO COMPLETO E RESILIENTE NA LÍNGUA EXATA SELECIONADA
+                let fallback = currentLang === 'en'
+                    ? `[CONTINGENCY MODULE] Analyzing your request for **${engineState.symbol}** ($${engineState.precoAtual.toFixed(2)}).\n\nOur Matrix suggests **${engineState.decisaoAtual}** with RSI sitting at **${engineState.rsi.toFixed(2)}**. Since you are currently **${engineState.posicaoStatus}**, manage your risk variables using targets based on local volatility. Make sure your Gemini API Key is configured on the source code to release deep AI analytics.`
+                    : `[MÓDULO DE CONTINGÊNCIA] Analisando sua solicitação para o par **${engineState.symbol}** ($${engineState.precoAtual.toFixed(2)}).\n\nNossa Matriz aponta **${engineState.decisaoAtual}** com o RSI assentado em **${engineState.rsi.toFixed(2)}**. Como você está atualmente **${engineState.posicaoStatus}**, gerencie seu risco usando os alvos protetores baseados na volatilidade imediata do ativo. Certifique-se de configurar a sua API Key do Gemini para liberar a inteligência analítica irrestrita.`;
+                
+                appendChatMsg('mentor', fallback);
+            } finally {
+                input.disabled = false;
+                submitBtn.disabled = false;
+                submitBtn.innerText = i18n[currentLang].chatSendBtn;
+                input.focus();
+            }
+        }
+
+        // --- INICIALIZAÇÃO CONTÍNUA ---
+        window.onload = () => {
+            // Inicializa a interface no idioma padrão (Inglês = 'en')
+            toggleLanguage("en");
+            
+            // Renderiza mensagem de boas-vindas inicial no chat baseado no idioma padrão
+            appendChatMsg('mentor', i18n["en"].welcomeMessage);
+
+            setInterval(runHFTLoop, 1000);
+        };
+    </script>
+</body>
+</html>
